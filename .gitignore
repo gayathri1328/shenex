@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+python311/
+.venv/
+env/
+venv/
+
+# Build and distribution
+dist/
+build/
+*.egg-info/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Uploads and temporary analysis files
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/test_videos/*.mp4
+
+# Model weights (Ultralytics auto-downloads this when run)
+*.pt
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
