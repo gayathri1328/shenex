@@ -3,6 +3,10 @@
 > *AI-Powered Occupancy & Movement Pattern Analysis for 360° Indoor Spaces*  
 > **Hackathon Problem:** PR-02 — Intelligent Occupancy Pattern Analysis
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Vercel-6C4AB6?style=for-the-badge&logo=vercel&logoColor=white)](https://temporary-sonic-harp-ey7i9eg.vercel.app)
+[![Deployment Guide](https://img.shields.io/badge/Deployment-Render_+_Vercel-4ECCA3?style=for-the-badge&logo=render&logoColor=white)](DEPLOYMENT.md)
+[![Model](https://img.shields.io/badge/Model-Ultralytics_YOLOv8n-8D68DC?style=for-the-badge&logo=python&logoColor=white)](backend/)
+
 ---
 
 ## 🌟 Overview & Product Vision
