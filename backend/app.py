@@ -8,8 +8,13 @@ from fastapi.middleware.cors import CORSMiddleware
 import time
 import uuid
 import os
+import sys
 import shutil
 import json
+
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 from video_metadata import extract_video_metadata
 from yolo_tracker import RealYOLOTracker
@@ -41,7 +46,10 @@ yolo_tracker_instance = None
 def get_tracker():
     global yolo_tracker_instance
     if yolo_tracker_instance is None:
-        yolo_tracker_instance = RealYOLOTracker(model_weights="yolov8n.pt", conf_threshold=0.35)
+        model_path = os.path.join(os.path.dirname(__file__), "yolov8n.pt")
+        if not os.path.exists(model_path):
+            model_path = "yolov8n.pt"
+        yolo_tracker_instance = RealYOLOTracker(model_weights=model_path, conf_threshold=0.35)
     return yolo_tracker_instance
 
 @app.get("/api/health")
@@ -181,6 +189,28 @@ def analyze_scenario(scenario_id: str):
         "model_information": results["model_information"],
     }
 
+# Optional: Serve built frontend if dist/ directory exists
+dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dist"))
+if os.path.exists(dist_dir):
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+    assets_dir = os.path.join(dist_dir, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api"):
+            raise HTTPException(status_code=404, detail="API route not found")
+        candidate_file = os.path.join(dist_dir, full_path)
+        if os.path.isfile(candidate_file):
+            return FileResponse(candidate_file)
+        index_file = os.path.join(dist_dir, "index.html")
+        if os.path.isfile(index_file):
+            return FileResponse(index_file)
+        raise HTTPException(status_code=404, detail="File not found")
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

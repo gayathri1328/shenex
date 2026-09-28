@@ -56,8 +56,10 @@ def overlay_transparent(background, overlay, x, y):
     # Direct copy with slight soft border
     background[y1:y2, x1:x2] = overlay[ov_y1:ov_y2, ov_x1:ov_x2]
 
-def generate_video_a(output_path, crops, width=720, height=540, fps=30, duration_sec=5):
+def generate_video_a(output_path, crops=None, width=720, height=540, fps=30, duration_sec=5):
     """TEST A: 1 Real Person walking horizontally across frame."""
+    if crops is None:
+        crops = get_person_crops()
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
     total_frames = fps * duration_sec
@@ -83,8 +85,10 @@ def generate_video_a(output_path, crops, width=720, height=540, fps=30, duration
     out.release()
     print(f"Generated: {output_path}")
 
-def generate_video_b(output_path, crops, width=720, height=540, fps=30, duration_sec=5):
+def generate_video_b(output_path, crops=None, width=720, height=540, fps=30, duration_sec=5):
     """TEST B: 3 Real People moving across multi-zones."""
+    if crops is None:
+        crops = get_person_crops()
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
     total_frames = fps * duration_sec
@@ -121,8 +125,10 @@ def generate_video_b(output_path, crops, width=720, height=540, fps=30, duration
     out.release()
     print(f"Generated: {output_path}")
 
-def generate_video_c(output_path, crops, width=720, height=540, fps=30, duration_sec=6):
+def generate_video_c(output_path, crops=None, width=720, height=540, fps=30, duration_sec=6):
     """TEST C: 2 Real People dwelling in Zone A (Northwest)."""
+    if crops is None:
+        crops = get_person_crops()
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
     total_frames = fps * duration_sec
