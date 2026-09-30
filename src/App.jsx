@@ -1,33 +1,103 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component } from 'react';
 import { Navigation } from './components/Navigation';
 import { Footer } from './components/Footer';
+import { SignInPage } from './pages/SignInPage';
 import { LandingPage } from './pages/LandingPage';
-import { FeaturesPage } from './pages/FeaturesPage';
-import { HowItWorksPage } from './pages/HowItWorksPage';
-import { PrivacyPage } from './pages/PrivacyPage';
+import { DashboardPage } from './pages/DashboardPage';
 import { UploadPage } from './pages/UploadPage';
 import { ProcessingPage } from './pages/ProcessingPage';
-import { DashboardPage } from './pages/DashboardPage';
 import { ZoneAnalysisPage } from './pages/ZoneAnalysisPage';
 import { MovementPage } from './pages/MovementPage';
 import { InsightsPage } from './pages/InsightsPage';
-import { HistoryPage } from './pages/HistoryPage';
+import { FeaturesPage } from './pages/FeaturesPage';
+import { HowItWorksPage } from './pages/HowItWorksPage';
+import { PrivacyPage } from './pages/PrivacyPage';
 import { NotFoundPage } from './pages/NotFoundPage';
-import { AuthModal } from './pages/AuthModal';
-import { authService, databaseService } from './services/supabaseClient';
+import { authService } from './services/supabaseClient';
+import { RotateCcw, AlertTriangle } from 'lucide-react';
+
+/**
+ * Resilient Error Boundary to ensure SHENEX NEVER displays a black or blank page
+ */
+class PageErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('SHENEX Component Error Caught:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="container" style={{ padding: '6rem 1.5rem', textAlign: 'center' }}>
+          <div style={{
+            maxWidth: '520px',
+            margin: '0 auto',
+            background: 'var(--cream-card)',
+            border: '1.5px solid var(--lavender-border)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '3rem 2rem',
+            boxShadow: 'var(--shadow-md)',
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '16px',
+              background: '#FFF0EB',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem',
+            }}>
+              <AlertTriangle size={28} color="var(--peach-accent)" />
+            </div>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--plum-deep)', marginBottom: '0.6rem' }}>
+              Something went wrong while loading this analysis.
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '2rem' }}>
+              The application encountered a display exception, but your real analytics data is safe.
+            </p>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                if (this.props.onReset) this.props.onReset();
+              }}
+              className="btn btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              <RotateCcw size={16} />
+              <span>Back to Overview</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export function App() {
+  // 1. Authentication State: Restored from Supabase / localStorage on mount & refresh
+  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const [currentPage, setCurrentPage] = useState('landing');
-  // Strict Fresh State: activeAnalysis is null until a video is processed!
+  
+  // 2. Real Computer Vision Analysis State (shared across Overview, Zones, Movement, Insights)
   const [activeAnalysis, setActiveAnalysis] = useState(null);
   const [pendingVideo, setPendingVideo] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  // Load existing session on mount
+  // Restore authenticated session safely
   useEffect(() => {
     const user = authService.getCurrentUser();
-    setCurrentUser(user);
+    if (user) {
+      setCurrentUser(user);
+    }
   }, []);
 
   const navigateTo = (pageId) => {
@@ -35,24 +105,28 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleAuthSuccess = (user) => {
+    setCurrentUser(user);
+    setCurrentPage('landing');
+  };
+
+  const handleLogout = async () => {
+    await authService.logout();
+    setCurrentUser(null);
+    setActiveAnalysis(null);
+    setCurrentPage('landing');
+  };
+
   const handleStartProcessing = (fileOrScenario) => {
-    // Clear any previous analysis state immediately before processing new video
+    // Clear previous analysis state immediately before processing new video
     setActiveAnalysis(null);
     setPendingVideo(fileOrScenario);
     navigateTo('processing');
   };
 
-  const handleProcessingComplete = async (analysisPayload) => {
+  const handleProcessingComplete = (analysisPayload) => {
     if (analysisPayload) {
       setActiveAnalysis(analysisPayload);
-      // Persist to user history if logged in
-      if (currentUser) {
-        try {
-          await databaseService.saveAnalysis(currentUser.id, analysisPayload);
-        } catch (e) {
-          console.error('Failed to persist analysis:', e);
-        }
-      }
     }
     navigateTo('dashboard');
   };
@@ -62,17 +136,16 @@ export function App() {
     navigateTo('dashboard');
   };
 
-  const handleLoadSavedAnalysis = (savedAnalysis) => {
-    setActiveAnalysis(savedAnalysis);
-    navigateTo('dashboard');
-  };
+  // MANDATORY REQUIREMENT:
+  // When there is NO authenticated Supabase user, SHOW ONLY THE SIGN-IN PAGE.
+  // Never show landing page, dashboard, history, or analysis before login.
+  if (!currentUser) {
+    return (
+      <SignInPage onAuthSuccess={handleAuthSuccess} />
+    );
+  }
 
-  const handleLogout = async () => {
-    await authService.logout();
-    setCurrentUser(null);
-    navigateTo('landing');
-  };
-
+  // AUTHENTICATED USER FLOW
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Universal Top Navigation */}
@@ -80,105 +153,80 @@ export function App() {
         currentPage={currentPage} 
         onNavigate={navigateTo}
         currentUser={currentUser}
-        onOpenAuth={() => setAuthModalOpen(true)}
         onLogout={handleLogout}
         hasActiveAnalysis={Boolean(activeAnalysis)}
       />
 
-      {/* Main Routed Page Body */}
+      {/* Main Routed Page Body Protected with ErrorBoundary */}
       <main style={{ flex: 1 }}>
-        {currentPage === 'landing' && (
-          <LandingPage 
-            onNavigate={navigateTo} 
-            onSelectPreset={handleStartProcessing} 
-          />
-        )}
+        <PageErrorBoundary onReset={() => navigateTo('dashboard')}>
+          {currentPage === 'landing' && (
+            <LandingPage 
+              onNavigate={navigateTo} 
+              onSelectPreset={handleStartProcessing} 
+            />
+          )}
 
-        {currentPage === 'features' && (
-          <FeaturesPage onNavigate={navigateTo} />
-        )}
+          {currentPage === 'dashboard' && (
+            <DashboardPage 
+              activeAnalysis={activeAnalysis}
+              onClearAnalysis={handleClearAnalysis}
+              onNavigate={navigateTo}
+            />
+          )}
 
-        {currentPage === 'how-it-works' && (
-          <HowItWorksPage onNavigate={navigateTo} />
-        )}
+          {currentPage === 'zones' && (
+            <ZoneAnalysisPage 
+              currentPreset={activeAnalysis}
+              onNavigate={navigateTo}
+            />
+          )}
 
-        {currentPage === 'privacy' && (
-          <PrivacyPage onNavigate={navigateTo} />
-        )}
+          {currentPage === 'movement' && (
+            <MovementPage 
+              currentPreset={activeAnalysis}
+              onNavigate={navigateTo}
+            />
+          )}
 
-        {currentPage === 'upload' && (
-          <UploadPage 
-            onStartProcessing={handleStartProcessing} 
-          />
-        )}
+          {currentPage === 'insights' && (
+            <InsightsPage 
+              currentPreset={activeAnalysis}
+              onNavigate={navigateTo}
+            />
+          )}
 
-        {currentPage === 'processing' && (
-          <ProcessingPage 
-            targetVideoOrPreset={pendingVideo}
-            onProcessingComplete={handleProcessingComplete}
-            onCancel={() => navigateTo('upload')}
-          />
-        )}
+          {currentPage === 'upload' && (
+            <UploadPage 
+              onStartProcessing={handleStartProcessing} 
+            />
+          )}
 
-        {currentPage === 'dashboard' && (
-          <DashboardPage 
-            activeAnalysis={activeAnalysis}
-            onClearAnalysis={handleClearAnalysis}
-            onNavigate={navigateTo}
-          />
-        )}
+          {currentPage === 'processing' && (
+            <ProcessingPage 
+              targetVideoOrPreset={pendingVideo}
+              onProcessingComplete={handleProcessingComplete}
+              onCancel={() => navigateTo('upload')}
+            />
+          )}
 
-        {currentPage === 'zones' && (
-          <ZoneAnalysisPage 
-            currentPreset={activeAnalysis}
-            onNavigate={navigateTo}
-          />
-        )}
+          {currentPage === 'features' && (
+            <FeaturesPage onNavigate={navigateTo} />
+          )}
 
-        {currentPage === 'movement' && (
-          <MovementPage 
-            currentPreset={activeAnalysis}
-            onNavigate={navigateTo}
-          />
-        )}
+          {currentPage === 'how-it-works' && (
+            <HowItWorksPage onNavigate={navigateTo} />
+          )}
 
-        {currentPage === 'insights' && (
-          <InsightsPage 
-            currentPreset={activeAnalysis}
-            onNavigate={navigateTo}
-          />
-        )}
+          {currentPage === 'privacy' && (
+            <PrivacyPage onNavigate={navigateTo} />
+          )}
 
-        {currentPage === 'history' && (
-          <HistoryPage 
-            currentUser={currentUser}
-            onLoadAnalysis={handleLoadSavedAnalysis}
-            onNavigate={navigateTo}
-          />
-        )}
-
-        {currentPage === 'auth' && (
-          <div className="container" style={{ padding: '6rem 1.5rem', textAlign: 'center' }}>
-            <button onClick={() => setAuthModalOpen(true)} className="btn btn-primary btn-lg">
-              Open Sign In / Sign Up Modal
-            </button>
-          </div>
-        )}
-
-        {currentPage === '404' && (
-          <NotFoundPage onNavigate={navigateTo} />
-        )}
+          {currentPage === '404' && (
+            <NotFoundPage onNavigate={navigateTo} />
+          )}
+        </PageErrorBoundary>
       </main>
-
-      {/* Authentication Modal */}
-      <AuthModal 
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        onAuthSuccess={(user) => {
-          setCurrentUser(user);
-          setAuthModalOpen(false);
-        }}
-      />
 
       {/* Universal Bottom Footer */}
       <Footer onNavigate={navigateTo} />

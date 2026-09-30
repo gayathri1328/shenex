@@ -35,3 +35,5 @@ backend/test_videos/*.mp4
 .DS_Store
 Thumbs.db
 *.log
+
+.vercel

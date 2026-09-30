@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { DoodleEye, DoodlePerson, DoodleSparkle } from './doodles/DoodleIndex';
-import { Camera, BarChart3, History, LogIn, LogOut, User, Menu, X, ArrowRight } from 'lucide-react';
+import { Camera, BarChart3, LogOut, User, Menu, X, ArrowRight } from 'lucide-react';
 
 export const Navigation = ({ 
   currentPage, 
   onNavigate, 
   currentUser, 
-  onOpenAuth, 
   onLogout,
   hasActiveAnalysis 
 }) => {
@@ -55,70 +54,100 @@ export const Navigation = ({
             </li>
           ))}
 
-          {/* Direct link to Dashboard when active */}
+          {/* Direct link to Dashboard */}
           <li>
             <button
               onClick={() => handleNav('dashboard')}
-              className={`nav-link ${currentPage === 'dashboard' ? 'active' : ''}`}
-              style={{ fontWeight: 700 }}
+              className={`nav-link ${['dashboard', 'zones', 'movement', 'insights'].includes(currentPage) ? 'active' : ''}`}
+              style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <BarChart3 size={15} />
-              Dashboard
-            </button>
-          </li>
-
-          {/* History link */}
-          <li>
-            <button
-              onClick={() => handleNav('history')}
-              className={`nav-link ${currentPage === 'history' ? 'active' : ''}`}
-            >
-              <History size={15} />
-              History
+              <span>Dashboard</span>
             </button>
           </li>
         </ul>
 
         {/* User Auth & Actions */}
         <div className="nav-actions">
-          {currentUser ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <button
-                onClick={() => handleNav('history')}
+          {currentUser && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
                 className="btn btn-secondary btn-sm"
-                style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem', fontWeight: 700 }}
+                style={{
+                  padding: '0.4rem 0.85rem',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'default',
+                }}
               >
                 <User size={14} color="var(--purple-primary)" />
-                <span>@{currentUser.username}</span>
-              </button>
+                <span style={{ color: 'var(--plum-deep)' }}>@{currentUser.username}</span>
+              </div>
               <button
                 onClick={onLogout}
                 className="btn btn-secondary btn-sm"
-                style={{ padding: '0.35rem 0.7rem' }}
-                title="Log Out"
+                style={{ padding: '0.4rem 0.7rem' }}
+                title="Log Out of SHENEX"
+                aria-label="Log Out"
               >
-                <LogOut size={14} />
+                <LogOut size={15} />
               </button>
             </div>
-          ) : (
-            <button
-              onClick={onOpenAuth}
-              className="btn btn-secondary btn-sm"
-            >
-              <LogIn size={15} />
-              <span>Sign In</span>
-            </button>
           )}
 
           <button 
             onClick={() => handleNav('upload')} 
             className="btn btn-primary btn-sm"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <Camera size={16} />
             <span>Upload Video</span>
           </button>
+
+          {/* Mobile hamburger menu button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="mobile-menu-toggle"
+            aria-label="Toggle Navigation Menu"
+            style={{ display: 'none' }}
+          >
+            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="mobile-menu" style={{
+          background: 'var(--cream-card)',
+          borderBottom: '1px solid var(--lavender-border)',
+          padding: '1rem 1.5rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.6rem',
+        }}>
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => handleNav(item.id)}
+              className={`nav-link ${currentPage === item.id ? 'active' : ''}`}
+              style={{ textAlign: 'left', padding: '0.6rem 0' }}
+            >
+              <span>{item.label}</span>
+            </button>
+          ))}
+          <button
+            onClick={() => handleNav('dashboard')}
+            className={`nav-link ${currentPage === 'dashboard' ? 'active' : ''}`}
+            style={{ textAlign: 'left', padding: '0.6rem 0', fontWeight: 700 }}
+          >
+            <span>Dashboard</span>
+          </button>
+        </div>
+      )}
     </header>
   );
 };

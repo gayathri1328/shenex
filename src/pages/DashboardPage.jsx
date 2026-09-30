@@ -267,10 +267,11 @@ export const DashboardPage = ({
                 {/* Area and Line */}
                 {(() => {
                   const pointsList = activeAnalysis.occupancy_timeline;
-                  const maxCount = Math.max(1, activeAnalysis.peak_occupancy);
+                  const maxCount = Math.max(1, activeAnalysis.peak_occupancy || 1);
                   const polyCoords = pointsList.map((d, i) => {
+                    const count = d.occupancy !== undefined ? d.occupancy : (d.count || 0);
                     const x = 30 + (i / Math.max(1, pointsList.length - 1)) * 420;
-                    const y = 190 - (d.count / maxCount) * 150;
+                    const y = 190 - (count / maxCount) * 150;
                     return `${x},${y}`;
                   });
 
@@ -289,10 +290,11 @@ export const DashboardPage = ({
                         points={polyCoords.join(' ')}
                       />
                       {pointsList.map((d, i) => {
+                        const count = d.occupancy !== undefined ? d.occupancy : (d.count || 0);
                         const x = 30 + (i / Math.max(1, pointsList.length - 1)) * 420;
-                        const y = 190 - (d.count / maxCount) * 150;
+                        const y = 190 - (count / maxCount) * 150;
                         return (
-                          <g key={i}>
+                          <g key={d.timestamp !== undefined ? `pt-${d.timestamp}` : i}>
                             <circle cx={x} cy={y} r="4" fill="#FFFFFF" stroke="var(--purple-primary)" strokeWidth="2.5" />
                           </g>
                         );
@@ -339,9 +341,9 @@ export const DashboardPage = ({
                 Zero people detected in this video.
               </div>
             ) : (
-              activeAnalysis.trajectories.map((traj) => (
+              activeAnalysis.trajectories.map((traj, idx) => (
                 <div
-                  key={traj.id}
+                  key={traj.track_id || traj.id || `traj-${idx}`}
                   style={{
                     display: 'flex',
                     alignItems: 'center',

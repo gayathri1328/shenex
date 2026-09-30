@@ -13,6 +13,7 @@ import { apiService } from '../services/apiService';
 export const ProcessingPage = ({ targetVideoOrPreset, onProcessingComplete, onCancel }) => {
   const [currentStageIdx, setCurrentStageIdx] = useState(0);
   const [progressPercent, setProgressPercent] = useState(0);
+  const [stageText, setStageText] = useState('Preparing video...');
   const [error, setError] = useState(null);
   const [isFinished, setIsFinished] = useState(false);
   const canvasRef = useRef(null);
@@ -37,6 +38,9 @@ export const ProcessingPage = ({ targetVideoOrPreset, onProcessingComplete, onCa
           if (!isCancelled) {
             setCurrentStageIdx(progress.stageIndex);
             setProgressPercent(progress.progressPercent);
+            if (progress.stage) {
+              setStageText(progress.stage);
+            }
           }
         });
 
@@ -216,6 +220,20 @@ export const ProcessingPage = ({ targetVideoOrPreset, onProcessingComplete, onCa
               background: 'linear-gradient(90deg, var(--purple-primary) 0%, var(--mint-accent) 100%)',
               transition: 'width 0.4s ease',
             }} />
+          </div>
+
+          <div style={{
+            marginTop: '8px',
+            fontSize: '0.8rem',
+            color: 'var(--text-secondary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            fontFamily: 'monospace',
+          }}>
+            <Loader2 size={13} className="spin" style={{ display: isFinished ? 'none' : 'inline' }} />
+            <span>{stageText}</span>
           </div>
         </div>
 

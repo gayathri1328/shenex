@@ -2,6 +2,7 @@
  * SHENEX Real Computer Vision API Service
  * Connects to FastAPI Ultralytics YOLOv8 backend.
  * Zero hardcoded mock numbers. Zero fake fallbacks.
+ * Streams real-time frame progress directly from Python.
  */
 
 const rawApiUrl = import.meta.env.VITE_API_URL || '';
@@ -25,7 +26,8 @@ export const apiService = {
   },
 
   /**
-   * Primary uploadVideo function connecting to FastAPI /api/upload
+   * Primary uploadVideo function connecting to FastAPI /api/upload-stream
+   * Reads real-time progress chunks directly from the computer vision pipeline.
    */
   async uploadVideo(fileOrScenario, onProgress) {
     if (!fileOrScenario) {
@@ -48,38 +50,76 @@ export const apiService = {
       }
     };
 
-    reportProgress(1, 15, 'Uploading video to FastAPI /api/upload...');
+    reportProgress(1, 5, 'Uploading video to SHENEX FastAPI backend...');
 
     const formData = new FormData();
     formData.append('file', fileOrScenario);
 
     try {
-      reportProgress(2, 35, 'Running Ultralytics YOLOv8 Person Detection...');
-
-      // Simulated micro-stage ticker for smooth progress while YOLO inference runs
-      const timer = setInterval(() => {
-        reportProgress(3, 60, 'Tracking movement & associating anonymous IDs...');
-      }, 500);
-
-      const res = await fetch(`${API_BASE}/upload`, {
+      // 1. Attempt Real-Time Streaming Progress Endpoint
+      const streamRes = await fetch(`${API_BASE}/upload-stream`, {
         method: 'POST',
         body: formData,
       });
 
-      clearInterval(timer);
+      if (streamRes.ok && streamRes.body) {
+        const reader = streamRes.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let finalResult = null;
 
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({ detail: res.statusText }));
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // keep trailing partial line
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+
+            try {
+              const msg = JSON.parse(trimmed);
+              if (msg.type === 'progress') {
+                reportProgress(msg.stageIndex || 2, msg.percent || msg.progressPercent || 25, msg.stage);
+              } else if (msg.type === 'complete') {
+                reportProgress(7, 100, msg.stage || 'Analysis complete!');
+                finalResult = msg.payload;
+              } else if (msg.type === 'error') {
+                throw new Error(msg.message || 'Computer Vision analysis failed.');
+              }
+            } catch (parseErr) {
+              if (parseErr.message && parseErr.message.includes('Computer Vision analysis failed')) {
+                throw parseErr;
+              }
+            }
+          }
+        }
+
+        if (finalResult) {
+          return finalResult;
+        }
+      }
+
+      // 2. Standard Fallback endpoint if streaming not supported
+      reportProgress(2, 30, 'Detecting people & tracking with ByteTrack...');
+      const fallbackRes = await fetch(`${API_BASE}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!fallbackRes.ok) {
+        const errJson = await fallbackRes.json().catch(() => ({ detail: fallbackRes.statusText }));
         throw new Error(errJson.detail || 'Computer Vision analysis failed.');
       }
 
-      reportProgress(5, 85, 'Computing real occupancy, dwell integrals & density heatmap...');
-
-      const data = await res.json();
-
+      reportProgress(6, 95, 'Synthesizing spatial occupancy and density heatmap...');
+      const data = await fallbackRes.json();
       reportProgress(7, 100, 'Analysis complete!');
-
       return data;
+
     } catch (err) {
       throw new Error(`Real CV Processing Error: ${err.message}`);
     }
@@ -94,6 +134,7 @@ export const apiService = {
 
   /**
    * Runs real YOLO analysis on one of the verified test scenarios (A, B, or C)
+   * Uses real-time progress streaming.
    */
   async analyzeScenario(scenarioId, onProgress) {
     const reportProgress = (idx, pct, stageName) => {
@@ -107,28 +148,73 @@ export const apiService = {
       }
     };
 
-    reportProgress(1, 20, `Loading test scenario: ${scenarioId.toUpperCase()}...`);
+    reportProgress(1, 5, `Loading verified test scenario: ${scenarioId.toUpperCase()}...`);
 
     try {
-      reportProgress(3, 55, 'Running Ultralytics YOLO inference on frames...');
-
-      const res = await fetch(`${API_BASE}/analyze-scenario?scenario_id=${scenarioId}`, {
+      // 1. Attempt Streaming Scenario Endpoint
+      const streamRes = await fetch(`${API_BASE}/analyze-scenario-stream?scenario_id=${scenarioId}`, {
         method: 'POST',
       });
 
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({ detail: res.statusText }));
+      if (streamRes.ok && streamRes.body) {
+        const reader = streamRes.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let finalResult = null;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+
+            try {
+              const msg = JSON.parse(trimmed);
+              if (msg.type === 'progress') {
+                reportProgress(msg.stageIndex || 2, msg.percent || msg.progressPercent || 25, msg.stage);
+              } else if (msg.type === 'complete') {
+                reportProgress(7, 100, msg.stage || 'Analysis ready!');
+                finalResult = msg.payload;
+              } else if (msg.type === 'error') {
+                throw new Error(msg.message || `Failed to analyze scenario ${scenarioId}.`);
+              }
+            } catch (parseErr) {
+              if (parseErr.message && parseErr.message.includes('Failed to analyze scenario')) {
+                throw parseErr;
+              }
+            }
+          }
+        }
+
+        if (finalResult) {
+          return finalResult;
+        }
+      }
+
+      // 2. Standard Fallback endpoint
+      reportProgress(2, 40, 'Running Ultralytics YOLOv8 & ByteTrack tracking...');
+      const fallbackRes = await fetch(`${API_BASE}/analyze-scenario?scenario_id=${scenarioId}`, {
+        method: 'POST',
+      });
+
+      if (!fallbackRes.ok) {
+        const errJson = await fallbackRes.json().catch(() => ({ detail: fallbackRes.statusText }));
         throw new Error(errJson.detail || `Failed to analyze scenario ${scenarioId}.`);
       }
 
-      reportProgress(6, 90, 'Synthesizing spatial metrics...');
-
-      const data = await res.json();
+      reportProgress(6, 95, 'Synthesizing spatial metrics...');
+      const data = await fallbackRes.json();
       reportProgress(7, 100, 'Analysis ready!');
       return data;
+
     } catch (err) {
       throw new Error(`Scenario Analysis Error: ${err.message}`);
     }
   },
 };
-

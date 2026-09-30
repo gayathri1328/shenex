@@ -14,30 +14,46 @@ import {
   Zap, 
   Navigation, 
   TrendingUp,
-  MapPin
+  MapPin,
+  Sparkles,
+  BarChart3,
+  Camera
 } from 'lucide-react';
 
 export const MovementPage = ({ currentPreset, onNavigate }) => {
-  if (!currentPreset || !currentPreset.trajectories) {
+  // Empty State when no video has been analyzed
+  if (!currentPreset || !currentPreset.trajectories || currentPreset.trajectories.length === 0) {
     return (
       <div className="container" style={{ padding: '6rem 1.5rem', textAlign: 'center' }}>
         <div style={{
-          maxWidth: '520px',
+          maxWidth: '540px',
           margin: '0 auto',
           background: 'var(--cream-card)',
           border: '1.5px dashed var(--purple-primary)',
           borderRadius: 'var(--radius-xl)',
-          padding: '3.5rem 2rem',
+          padding: '4rem 2.5rem',
+          boxShadow: 'var(--shadow-md)',
+          animation: 'fadeInSlideUp 0.4s ease',
         }}>
-          <DoodleFootprints size={72} color="var(--purple-primary)" />
-          <h2 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--plum-deep)', marginTop: '1rem' }}>
-            No Movement Data Active
+          <div style={{ marginBottom: '1.2rem' }}>
+            <DoodleFootprints size={76} color="var(--purple-primary)" />
+          </div>
+          <span className="badge-pill badge-mint" style={{ marginBottom: '0.8rem' }}>
+            Movement Analysis Module
+          </span>
+          <h2 style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--plum-deep)', marginTop: '0.5rem', marginBottom: '0.8rem' }}>
+            No video analyzed yet.
           </h2>
-          <p style={{ color: 'var(--text-secondary)', margin: '0.8rem 0 2rem' }}>
-            Upload a video to analyze directional flows, velocity profiles, and movement pathways.
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', lineHeight: 1.6, margin: '0 auto 2.2rem', maxWidth: '420px' }}>
+            Movement trajectories will appear after video analysis is executed on an uploaded video.
           </p>
-          <button onClick={() => onNavigate('upload')} className="btn btn-primary btn-lg">
-            Upload Video
+          <button 
+            onClick={() => onNavigate('upload')} 
+            className="btn btn-primary btn-lg"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            <Camera size={18} />
+            <span>Upload Video</span>
           </button>
         </div>
       </div>
@@ -85,7 +101,7 @@ export const MovementPage = ({ currentPreset, onNavigate }) => {
   ] : [];
 
   return (
-    <div className="container" style={{ padding: '2.5rem 1.5rem 6rem' }}>
+    <div className="container" style={{ padding: '2.5rem 1.5rem 6rem', animation: 'fadeInSlideUp 0.35s ease' }}>
       {/* Top Header */}
       <div style={{
         display: 'flex',
@@ -93,13 +109,13 @@ export const MovementPage = ({ currentPreset, onNavigate }) => {
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: '1rem',
-        marginBottom: '2rem',
+        marginBottom: '1.8rem',
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
             <span className="badge-pill badge-mint">Kinematic Vector Mapping</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Dataset: <strong>{preset.title}</strong>
+            <span style={{ fontSize: '0.82rem', fontFamily: 'monospace', color: 'var(--purple-primary)', fontWeight: 700 }}>
+              {preset.analysis_id || preset.video_metadata?.filename || 'Real Video'}
             </span>
           </div>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--plum-deep)' }}>
@@ -108,17 +124,19 @@ export const MovementPage = ({ currentPreset, onNavigate }) => {
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => onNavigate('zones')} className="btn btn-secondary btn-sm">
-            Zone Analysis
+          <button onClick={() => onNavigate('zones')} className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Layers size={14} />
+            <span>Zone Analysis</span>
           </button>
-          <button onClick={() => onNavigate('insights')} className="btn btn-primary btn-sm">
-            AI Spatial Insights <ArrowRight size={14} />
+          <button onClick={() => onNavigate('insights')} className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>AI Spatial Insights</span>
+            <ArrowRight size={14} />
           </button>
         </div>
       </div>
 
-      {/* Navigation Sub-Tabs */}
-      <div className="app-tabs-nav">
+      {/* Result Section Navigation Sub-Tabs */}
+      <div className="app-tabs-nav" style={{ marginBottom: '2rem' }}>
         <button onClick={() => onNavigate('dashboard')} className="tab-btn">
           <Activity size={16} /> Overview
         </button>
@@ -126,52 +144,97 @@ export const MovementPage = ({ currentPreset, onNavigate }) => {
           <Layers size={16} /> Zone Analysis
         </button>
         <button className="tab-btn active">
-          <Compass size={16} /> Movement Flow
+          <TrendingUp size={16} /> Movement Flow
         </button>
         <button onClick={() => onNavigate('insights')} className="tab-btn">
-          <DoodleSparkle size={16} /> AI Insights
+          <Sparkles size={16} /> AI Insights
         </button>
       </div>
 
       {/* Movement Insights Summary Bar */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
         gap: '1.5rem',
         marginBottom: '2.5rem',
       }}>
-        <div className="kpi-card">
+        <div className="kpi-card" style={{
+          background: 'var(--cream-card)',
+          border: '1.5px solid var(--lavender-border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '1.5rem',
+          boxShadow: 'var(--shadow-sm)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
           <div>
-            <span className="kpi-label">Dominant Vector Axis</span>
-            <div className="kpi-num" style={{ fontSize: '1.6rem' }}>West → East</div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Entryway to Espresso Bar Spine</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+              Extracted Trajectories
+            </span>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--plum-deep)', marginTop: '4px' }}>
+              {trajectories.length} paths
+            </div>
+            <span style={{ fontSize: '0.78rem', color: 'var(--purple-primary)', fontWeight: 600 }}>
+              Persistent ByteTrack vectors
+            </span>
           </div>
-          <Compass size={32} color="var(--purple-primary)" />
+          <Compass size={36} color="var(--purple-primary)" />
         </div>
 
-        <div className="kpi-card">
+        <div className="kpi-card" style={{
+          background: 'var(--cream-card)',
+          border: '1.5px solid var(--lavender-border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '1.5rem',
+          boxShadow: 'var(--shadow-sm)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
           <div>
-            <span className="kpi-label">Average Walking Velocity</span>
-            <div className="kpi-num" style={{ fontSize: '1.6rem' }}>1.14 m/s</div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--mint-accent)', fontWeight: 700 }}>Optimal Unhindered Pace</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+              Circulation Velocity
+            </span>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--plum-deep)', marginTop: '4px' }}>
+              Fluid Pace
+            </div>
+            <span style={{ fontSize: '0.78rem', color: 'var(--mint-accent)', fontWeight: 700 }}>
+              Optimal Unhindered Flow
+            </span>
           </div>
-          <Zap size={32} color="var(--mint-accent)" />
+          <Zap size={36} color="var(--mint-accent)" />
         </div>
 
-        <div className="kpi-card">
+        <div className="kpi-card" style={{
+          background: 'var(--cream-card)',
+          border: '1.5px solid var(--lavender-border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '1.5rem',
+          boxShadow: 'var(--shadow-sm)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
           <div>
-            <span className="kpi-label">Circulation Friction Index</span>
-            <div className="kpi-num" style={{ fontSize: '1.6rem' }}>12.4%</div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--peach-accent)', fontWeight: 700 }}>Low Counter-Flow Collision</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+              Circulation Status
+            </span>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--plum-deep)', marginTop: '4px' }}>
+              {preset.traffic_analysis?.congestion_status || 'Fluid Flow'}
+            </div>
+            <span style={{ fontSize: '0.78rem', color: 'var(--peach-accent)', fontWeight: 700 }}>
+              Peak {preset.peak_occupancy || 0} Occupants
+            </span>
           </div>
-          <DoodleFootprints size={36} />
+          <DoodleFootprints size={40} />
         </div>
       </div>
 
       {/* Flow Matrix Section */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1.1fr 0.9fr',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
         gap: '2rem',
         marginBottom: '2.5rem',
       }}>
@@ -197,16 +260,16 @@ export const MovementPage = ({ currentPreset, onNavigate }) => {
             </div>
             <div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--plum-deep)' }}>
-                Origin → Destination Transition Flow
+                Zone Circulation Corridors
               </h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Markov chain transition probabilities between functional zones
+                Observed spatial transition vectors between active functional zones
               </p>
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {transitions.map((t, idx) => (
+            {transitions.length > 0 ? transitions.map((t, idx) => (
               <div
                 key={idx}
                 style={{
@@ -239,7 +302,11 @@ export const MovementPage = ({ currentPreset, onNavigate }) => {
                   </span>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                Single-corridor trajectory movement recorded.
+              </div>
+            )}
           </div>
         </div>
 
@@ -268,7 +335,7 @@ export const MovementPage = ({ currentPreset, onNavigate }) => {
                 Circulation Behavioral Classification
               </h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Velocity distribution across tracked anonymous occupants
+                Movement velocity distribution across tracked anonymous occupants
               </p>
             </div>
           </div>
@@ -277,7 +344,7 @@ export const MovementPage = ({ currentPreset, onNavigate }) => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
                 <span style={{ fontWeight: 700, color: 'var(--plum-deep)' }}>
-                  🎯 Deep Focus / Static Occupants (&lt; 0.2 m/s)
+                  🎯 Stationary / High Dwell Occupants
                 </span>
                 <span style={{ fontWeight: 800, color: 'var(--purple-primary)' }}>{staticPct}%</span>
               </div>
@@ -289,7 +356,7 @@ export const MovementPage = ({ currentPreset, onNavigate }) => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
                 <span style={{ fontWeight: 700, color: 'var(--plum-deep)' }}>
-                  🚶 Casual Browsing & Meandering (0.2 - 0.9 m/s)
+                  🚶 Moderate Flow & Meandering
                 </span>
                 <span style={{ fontWeight: 800, color: 'var(--mint-accent)' }}>{meanderPct}%</span>
               </div>
@@ -301,7 +368,7 @@ export const MovementPage = ({ currentPreset, onNavigate }) => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
                 <span style={{ fontWeight: 700, color: 'var(--plum-deep)' }}>
-                  ⚡ Rapid Direct Transit (&gt; 0.9 m/s)
+                  ⚡ Rapid Transit Corridors
                 </span>
                 <span style={{ fontWeight: 800, color: 'var(--peach-accent)' }}>{transitPct}%</span>
               </div>
